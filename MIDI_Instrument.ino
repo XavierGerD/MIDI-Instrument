@@ -16,17 +16,19 @@
 #define TFT_RST        19
 #define TFT_DC         20
 
-#define menuUp 23
+#define numberOfButtonPins 8
+
+#define menuUp 21
 #define menuSelect 22
-#define menuDown 21
+#define menuDown 23
 #define sensorPin 6
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 byte startingNote = 60;
 
-byte pins[] = {5, 6, 7, 8, 9, 10, 11, 12};
-Button *buttons[sizeof(pins)];
+byte pins[numberOfButtonPins] = {5, 6, 7, 8, 9, 10, 11, 12};
+Button *buttons[numberOfButtonPins];
 
 byte chromatic[] = {1};
 byte ionian[] = {2, 2, 1, 2, 2, 2, 1};
@@ -74,6 +76,7 @@ byte sensorOctaveShift = 0;
 byte sensorMode = 1;
 byte currentSensitivity = 0;
 byte sensorSensitivities[4] = {200, 175, 150, 125};
+byte minimumSensitivity = 105;
 
 uint8_t potVal;
 
@@ -99,23 +102,46 @@ void loop() {
       buttons[i]->lastState = digitalRead(buttons[i]->pin);
     }
   }
-
-  potVal = map(analogRead(sensorPin), 95, sensorSensitivities[currentSensitivity], 0, 127);
+  byte constrainedPotVal = constrain(analogRead(sensorPin), minimumSensitivity, 201);
+  potVal = map(constrainedPotVal, minimumSensitivity, sensorSensitivities[currentSensitivity], 0, 127);
   currentVal = potVal;
+  
   if (currentVal != nextVal) {
-    midiEventPacket_t ccChange = {0x0B, 0xB0, 1, potVal};
-    midiEventPacket_t pitchBendChange = {0x0B, 0xE0, 1, potVal};
-    if (sensorMode == 1) {
-      MidiUSB.sendMIDI(ccChange);
-    }
-    if (sensorMode == 2) {
-      MidiUSB.sendMIDI(pitchBendChange);
-    }
-    if (sensorMode == 3) {
-      sensorOctaveShift = map(analogRead(sensorPin), 95, sensorSensitivities[currentSensitivity], 0, 3);
-    }
-    MidiUSB.flush();
+    handleSensorModes(constrainedPotVal);
+    
     nextVal = currentVal;
   }
   ManageNavigationButtons();
+}
+
+void handleSensorModes(byte constrainedPotVal) {
+  if (sensorMode == 1) {
+    midiEventPacket_t ccChange = {0x0B, 0xB0, 1, potVal};
+    MidiUSB.sendMIDI(ccChange);
+  }
+  if (sensorMode == 2) {
+    midiEventPacket_t pitchBendChange = {0x0B, 0xE0, 1, potVal};
+    MidiUSB.sendMIDI(pitchBendChange);
+  }
+  if (sensorMode == 3) {
+    handleOctaveShift(constrainedPotVal);
+  }
+  MidiUSB.flush();
+}
+
+void handleOctaveShift(byte constrainedPotVal) {
+  sensorOctaveShift = map(constrainedPotVal, minimumSensitivity, sensorSensitivities[currentSensitivity], 0, 3);
+
+  for (byte i = 0; i < numberOfButtonPins; i++) {
+    if (buttons[i]->lastPlayedNote) {
+      midiEventPacket_t noteOff = {0x08, 0x80, buttons[i]->lastPlayedNote, 127};
+      MidiUSB.sendMIDI(noteOff);
+      MidiUSB.flush();
+
+      byte noteToSend = buttons[i]->note + 12 * sensorOctaveShift;
+      midiEventPacket_t noteOn = {0x09, 0x90, noteToSend, 127};
+      MidiUSB.sendMIDI(noteOn);
+      MidiUSB.flush();
+    }
+  }
 }

@@ -1,7 +1,7 @@
 void assignNotesToButtons(byte startingNote, byte startingOctave, byte scale[], byte n) {
   byte scaleCounter = 0;
   byte currentNote = findStartingPoint(startingNote, startingOctave);
-  for (byte i = 0; i < sizeof(pins); i++) {
+  for (byte i = 0; i < numberOfButtonPins; i++) {
     buttons[i] = new Button(pins[i], currentNote);
     currentNote += scale[scaleCounter];
     scaleCounter++;

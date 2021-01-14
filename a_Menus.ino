@@ -7,10 +7,10 @@
 #define sensitivityLength 4
 
 Menu settingsMenuItems[settingsLength] = {
-  Menu("Sensor", 1, navigateToSubmenu),
-  Menu("Mode", 2, navigateToSubmenu),
-  Menu("Start Note", 3, navigateToSubmenu),
-  Menu("Start Octave", 4, navigateToSubmenu),
+  Menu("Sensor Mode", 1, navigateToSubmenu),
+  Menu("Scale", 2, navigateToSubmenu),
+  Menu("Tonic", 3, navigateToSubmenu),
+  Menu("Octave", 4, navigateToSubmenu),
   Menu("Sensitivity", 5, navigateToSubmenu)
 };
 
@@ -93,32 +93,32 @@ void navigateToSubmenu(byte target) {
 
 void changeSetting(byte setting) {
   sensorMode = setting;
-  Serial.println(setting);
+  navigateToSubmenu(0);
+}
+
+void endMenuInteraction() {
+  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
   navigateToSubmenu(0);
 }
 
 void changeScale(byte note) {
   currentScale = getSelectedItemIndex();
-  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
-  navigateToSubmenu(0);
+  endMenuInteraction();
 }
 
 void changeStartingNote(byte note) {
   currentStartingNote = note;
-  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
-  navigateToSubmenu(0);
+  endMenuInteraction();
 }
 
 void changeStartingOctave(byte octave) {
   currentStartingOctave = octave;
-  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
-  navigateToSubmenu(0);
+  endMenuInteraction();
 }
 
 void changeSensitivity(byte setting) {
   currentSensitivity = setting;
-  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
-  navigateToSubmenu(0);
+  endMenuInteraction();
 }
 
 byte getSelectedItemIndex() {
@@ -166,18 +166,10 @@ boolean lastButtonState3 = false;
 boolean newButtonState3 = false;
 
 void ManageNavigationButtons() {
-  newButtonState1 = digitalRead(menuUp);
+  newButtonState1 = digitalRead(menuDown);
   if (newButtonState1 != lastButtonState1) {
     if (newButtonState1) {
-      if (currentSelectorPosition == menuItemOffset * 2 && firstMenuItemIndex < arraySize - 3) {
-        firstMenuItemIndex++;
-      }
-
-      if (currentSelectorPosition < menuItemOffset * 2) {
-        currentSelectorPosition += menuItemOffset;
-      }
-
-      drawMenu(ST77XX_WHITE);
+      handleNavigatorDown();
     }
 
     lastButtonState1 = newButtonState1;
@@ -186,30 +178,63 @@ void ManageNavigationButtons() {
   newButtonState2 = digitalRead(menuSelect);
   if (newButtonState2 != lastButtonState2) {
     if (newButtonState2) {
-      Menu currentItem = allMenus[currentMenu][getSelectedItemIndex()];
-      //Serial.println(allMenus[currentMenu][getSelectedItemIndex()].menuName);
-      currentItem.onAction(currentItem.submenuTarget);
-      arraySize = menuLengths[currentMenu];
-      drawMenu(ST77XX_WHITE);
+      handleNavigationSelect();
     }
 
     lastButtonState2 = newButtonState2;
   }
 
 
-  newButtonState3 = digitalRead(menuDown);
+  newButtonState3 = digitalRead(menuUp);
   if (newButtonState3 != lastButtonState3) {
     if (newButtonState3) {
-      if (currentSelectorPosition == 0 && firstMenuItemIndex > 0) {
-        firstMenuItemIndex--;
-      }
-
-      if (currentSelectorPosition > 0) {
-        currentSelectorPosition -= menuItemOffset;
-      }
-
-      drawMenu(ST77XX_WHITE);
+      handleNavigatorUp();
     }
     lastButtonState3 = newButtonState3;
   }
+}
+
+void handleNavigationSelect() {
+  Menu currentItem = allMenus[currentMenu][getSelectedItemIndex()];
+  currentItem.onAction(currentItem.submenuTarget);
+  arraySize = menuLengths[currentMenu];
+  drawMenu(ST77XX_WHITE);
+}
+
+void handleNavigatorDown() {
+  if (currentSelectorPosition == menuItemOffset * 2 && firstMenuItemIndex == arraySize - 3) {
+    currentSelectorPosition = 0;
+    firstMenuItemIndex = 0;
+    drawMenu(ST77XX_WHITE);
+    return;
+  }
+
+  if (currentSelectorPosition == menuItemOffset * 2 && firstMenuItemIndex < arraySize - 3) {
+    firstMenuItemIndex++;
+  }
+
+  if (currentSelectorPosition < menuItemOffset * 2) {
+    currentSelectorPosition += menuItemOffset;
+  }
+
+  drawMenu(ST77XX_WHITE);
+}
+
+void handleNavigatorUp() {
+  if (currentSelectorPosition == 0 && firstMenuItemIndex == 0) {
+    currentSelectorPosition = menuItemOffset * 2;
+    firstMenuItemIndex = menuLengths[currentMenu] - 3;
+    drawMenu(ST77XX_WHITE);
+    return;
+  }
+
+  if (currentSelectorPosition == 0 && firstMenuItemIndex > 0) {
+    firstMenuItemIndex--;
+  }
+
+  if (currentSelectorPosition > 0) {
+    currentSelectorPosition -= menuItemOffset;
+  }
+
+  drawMenu(ST77XX_WHITE);
 }

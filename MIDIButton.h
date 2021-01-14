@@ -6,6 +6,7 @@ class Button {
     }
     byte pin;
     byte note;
+    byte lastPlayedNote;
     boolean lastState;
     boolean newState;
 
@@ -16,10 +17,19 @@ class Button {
         noteToSend = note + 12 * sensorOctaveShift;
       }
       if (newState) {
+        if (sensorMode == 3) {
+          lastPlayedNote = noteToSend;
+        }
         midiEventPacket_t noteOn = {0x09, 0x90, noteToSend, noteVelocity};
         MidiUSB.sendMIDI(noteOn);
         MidiUSB.flush();
       } else {
+        if (sensorMode == 3) {
+          lastPlayedNote = 0;
+        }
+        if (lastPlayedNote) {
+          midiEventPacket_t noteOff = {0x08, 0x80, lastPlayedNote, noteVelocity};
+        }
         midiEventPacket_t noteOff = {0x08, 0x80, noteToSend, noteVelocity};
         MidiUSB.sendMIDI(noteOff);
         MidiUSB.flush();
