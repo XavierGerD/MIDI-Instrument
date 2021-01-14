@@ -6,6 +6,7 @@
 #include "MIDIButton.h"
 #include "Menu.h"
 #include "Scales.h"
+#include "StartingNote.h"
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
 #include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
@@ -60,6 +61,19 @@ Scale scales[14] = {
 };
 byte scaleLengths[] = {1, 7, 7, 7, 7, 7, 7, 7, 7, 5, 5, 1, 2, 2 };
 byte currentScale = 0;
+byte currentStartingNote = 0;
+byte currentStartingOctave = 4;
+
+byte sensorOctaveShift = 0;
+
+// Sensor modes:
+// 0 = Velocity
+// 1 = Mod Wheel
+// 2 = Pitch Bend
+// 3 = Octave Shift
+byte sensorMode = 1;
+byte currentSensitivity = 0;
+byte sensorSensitivities[4] = {200, 175, 150, 125};
 
 uint8_t potVal;
 
@@ -74,23 +88,32 @@ void setup() {
   tft.init(135, 240);
   tft.setRotation(1);
   drawMenu(ST77XX_WHITE);
-  assignNotesToButtons(scales[currentScale].scale, scaleLengths[currentScale]);
+  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
 }
 
 void loop() {
   for (byte i = 0; i < sizeof(buttons) / sizeof(buttons[0]); i++) {
     buttons[i]->newState = digitalRead(buttons[i]->pin);
     if (buttons[i]->lastState != buttons[i]->newState) {
-      buttons[i]->playNote();
+      buttons[i]->playNote(sensorMode, potVal, sensorOctaveShift);
       buttons[i]->lastState = digitalRead(buttons[i]->pin);
     }
   }
 
-  potVal = map(analogRead(sensorPin), 95, 200, 0, 127);
+  potVal = map(analogRead(sensorPin), 95, sensorSensitivities[currentSensitivity], 0, 127);
   currentVal = potVal;
   if (currentVal != nextVal) {
     midiEventPacket_t ccChange = {0x0B, 0xB0, 1, potVal};
-    MidiUSB.sendMIDI(ccChange);
+    midiEventPacket_t pitchBendChange = {0x0B, 0xE0, 1, potVal};
+    if (sensorMode == 1) {
+      MidiUSB.sendMIDI(ccChange);
+    }
+    if (sensorMode == 2) {
+      MidiUSB.sendMIDI(pitchBendChange);
+    }
+    if (sensorMode == 3) {
+      sensorOctaveShift = map(analogRead(sensorPin), 95, sensorSensitivities[currentSensitivity], 0, 3);
+    }
     MidiUSB.flush();
     nextVal = currentVal;
   }

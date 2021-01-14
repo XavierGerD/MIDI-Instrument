@@ -1,7 +1,6 @@
-void assignNotesToButtons(byte scale[], byte n) {
-
+void assignNotesToButtons(byte startingNote, byte startingOctave, byte scale[], byte n) {
   byte scaleCounter = 0;
-  byte currentNote = startingNote;
+  byte currentNote = findStartingPoint(startingNote, startingOctave);
   for (byte i = 0; i < sizeof(pins); i++) {
     buttons[i] = new Button(pins[i], currentNote);
     currentNote += scale[scaleCounter];
@@ -13,6 +12,6 @@ void assignNotesToButtons(byte scale[], byte n) {
   }
 }
 
-void findScaleAndAssign(byte scaleNumber) {
-  
+byte findStartingPoint(byte startingNote, byte startingOctave) {
+  return startingNote + 12 * startingOctave;
 }

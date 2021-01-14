@@ -1,22 +1,28 @@
-#define settingsLength 3
+#define menusLength 6
+#define settingsLength 5
 #define sensorLength 4
 #define scaleLength 14
+#define startingNoteLength 12
+#define startingOctaveLength 9
+#define sensitivityLength 4
 
 Menu settingsMenuItems[settingsLength] = {
-  Menu("Sensor Mode", 1, navigateToSubmenu),
-  Menu("Scale", 2, navigateToSubmenu),
-  Menu("Config", 2, navigateToSubmenu)
+  Menu("Sensor", 1, navigateToSubmenu),
+  Menu("Mode", 2, navigateToSubmenu),
+  Menu("Start Note", 3, navigateToSubmenu),
+  Menu("Start Octave", 4, navigateToSubmenu),
+  Menu("Sensitivity", 5, navigateToSubmenu)
 };
 
 Menu sensorModeMenuItems[sensorLength] = {
   Menu("Velocity", 0, changeSetting),
-  Menu("Mod Wheel", 0, changeSetting),
-  Menu("Pitch Bend", 0, changeSetting),
-  Menu("Octave Shift", 0, changeSetting)
+  Menu("Mod Wheel", 1, changeSetting),
+  Menu("Pitch Bend", 2, changeSetting),
+  Menu("Octave Shift", 3, changeSetting)
 };
 
 Menu scaleMenuItems[scaleLength] = {
-  Menu("Chromatic", 0, changeScale), 
+  Menu("Chromatic", 0, changeScale),
   Menu("Ionian", 1, changeScale),
   Menu("Dorian", 2, changeScale),
   Menu("Phryigian", 3, changeScale),
@@ -32,13 +38,47 @@ Menu scaleMenuItems[scaleLength] = {
   Menu("Octa. 1, 2", 13, changeScale),
 };
 
-Menu* allMenus[3] = {settingsMenuItems, sensorModeMenuItems, scaleMenuItems};
+Menu startingNoteMenuItems[startingNoteLength] = {
+  Menu("C", 0, changeStartingNote),
+  Menu("Db", 1, changeStartingNote),
+  Menu("D", 2, changeStartingNote),
+  Menu("Eb", 3, changeStartingNote),
+  Menu("E", 4, changeStartingNote),
+  Menu("F", 5, changeStartingNote),
+  Menu("Gb", 6, changeStartingNote),
+  Menu("G", 7, changeStartingNote),
+  Menu("Ab", 8, changeStartingNote),
+  Menu("A", 9, changeStartingNote),
+  Menu("Bb", 10, changeStartingNote),
+  Menu("B", 11, changeStartingNote),
+};
+
+Menu startingOctaveMenuItems[startingOctaveLength] = {
+  Menu("0", 0, changeStartingOctave),
+  Menu("1", 1, changeStartingOctave),
+  Menu("2", 2, changeStartingOctave),
+  Menu("3", 3, changeStartingOctave),
+  Menu("4", 4, changeStartingOctave),
+  Menu("5", 5, changeStartingOctave),
+  Menu("6", 6, changeStartingOctave),
+  Menu("7", 7, changeStartingOctave),
+  Menu("8", 8, changeStartingOctave),
+};
+
+Menu sensitivityMenuItems[sensitivityLength] = {
+  Menu("Low", 0, changeSensitivity),
+  Menu("Medium", 1, changeSensitivity),
+  Menu("High", 2, changeSensitivity),
+  Menu("Very High", 3, changeSensitivity),
+};
+
+Menu* allMenus[menusLength] = {settingsMenuItems, sensorModeMenuItems, scaleMenuItems, startingNoteMenuItems, startingOctaveMenuItems, sensitivityMenuItems};
 
 byte currentMenu = 0;
 byte firstMenuItemIndex = 0;
 byte currentSelectorPosition = 0;
 
-byte menuLengths[3] = {settingsLength, sensorLength, scaleLength};
+byte menuLengths[menusLength] = {settingsLength, sensorLength, scaleLength, startingNoteLength, startingOctaveLength, sensitivityLength};
 byte arraySize = menuLengths[currentMenu];
 
 byte selectedItemBackground = 0x1335;
@@ -51,15 +91,33 @@ void navigateToSubmenu(byte target) {
   currentSelectorPosition = 0;
 }
 
-void changeSetting(byte setting, byte value) {
-  Serial.println("Changing setting");
+void changeSetting(byte setting) {
+  sensorMode = setting;
+  Serial.println(setting);
   navigateToSubmenu(0);
 }
 
-void changeScale(byte scale) {
+void changeScale(byte note) {
   currentScale = getSelectedItemIndex();
-  Serial.println(currentScale);
-  assignNotesToButtons(scales[currentScale].scale, scaleLengths[currentScale]);
+  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
+  navigateToSubmenu(0);
+}
+
+void changeStartingNote(byte note) {
+  currentStartingNote = note;
+  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
+  navigateToSubmenu(0);
+}
+
+void changeStartingOctave(byte octave) {
+  currentStartingOctave = octave;
+  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
+  navigateToSubmenu(0);
+}
+
+void changeSensitivity(byte setting) {
+  currentSensitivity = setting;
+  assignNotesToButtons(currentStartingNote, currentStartingOctave, scales[currentScale].scale, scaleLengths[currentScale]);
   navigateToSubmenu(0);
 }
 
